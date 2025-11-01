@@ -91,28 +91,28 @@ When filling in the `player team` column, use the following NFL team abbreviatio
 
 ### Command Line
 
-Calculate scores for a specific week:
+Calculate scores for a specific week using mock data:
 
 ```bash
 fantasy teams.csv --week 5
 ```
 
-Calculate scores for the current week (defaults to week 1 if not specified):
+Calculate scores using the Fantasy Football Data Pros API:
 
 ```bash
-fantasy teams.csv
+fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
 ```
 
 Save results to a file:
 
 ```bash
-fantasy teams.csv --week 5 --output results.csv
+fantasy teams.csv --week 5 --output results.csv --fetcher ffdp
 ```
 
-Specify season year:
+Specify season year (required for FFDP fetcher):
 
 ```bash
-fantasy teams.csv --week 5 --season-year 2024
+fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
 ```
 
 ### Example CSV
@@ -146,9 +146,31 @@ Team B - Week 5
 
 ## Score Fetchers
 
-Currently, the app includes a `mock` score fetcher that generates random scores for testing.
+The app supports multiple score fetchers:
 
-To implement a real score fetcher (e.g., ESPN API, NFL.com API, etc.), create a class that implements the `ScoreFetcher` protocol from `fantasy.score_fetcher`.
+### Mock Fetcher (default)
+
+The `mock` fetcher generates random scores for testing. Use this when you want to test the application without making API calls.
+
+```bash
+fantasy teams.csv --week 5 --fetcher mock
+```
+
+### Fantasy Football Data Pros (FFDP) API
+
+The `ffdp` fetcher uses the [Fantasy Football Data Pros API](https://www.fantasyfootballdatapros.com/our_api) to fetch real fantasy scores. This API provides historical data going back to 1999.
+
+```bash
+fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
+```
+
+**Note:** The FFDP API requires an internet connection. If a player's score cannot be found, the application will raise an error.
+
+**Rate Limiting:** The FFDP fetcher includes built-in rate limiting (0.5 seconds between requests) to avoid overwhelming the API. Responses are cached per week to minimize API calls.
+
+### Implementing Custom Fetchers
+
+To implement a custom score fetcher (e.g., ESPN API, NFL.com API, etc.), create a class that implements the `ScoreFetcher` protocol from `fantasy.score_fetcher` or extends `BaseScoreFetcher`.
 
 ## Development
 

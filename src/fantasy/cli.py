@@ -7,6 +7,7 @@ from pathlib import Path
 from fantasy.csv_parser import parse_fantasy_csv
 from fantasy.calculator import calculate_team_scores, format_team_scores
 from fantasy.score_fetcher import MockScoreFetcher, ScoreFetcher
+from fantasy.ffdp_fetcher import FFDPFetcher
 
 
 @click.command()
@@ -32,9 +33,9 @@ from fantasy.score_fetcher import MockScoreFetcher, ScoreFetcher
 )
 @click.option(
     "--fetcher",
-    type=click.Choice(["mock"], case_sensitive=False),
+    type=click.Choice(["mock", "ffdp"], case_sensitive=False),
     default="mock",
-    help="Score fetcher to use (default: mock)",
+    help="Score fetcher to use: 'mock' for testing, 'ffdp' for Fantasy Football Data Pros API (default: mock)",
     show_default=True,
 )
 def main(
@@ -92,6 +93,9 @@ def main(
             "Warning: Using mock score fetcher. Scores are randomly generated for testing.",
             err=True,
         )
+    elif fetcher == "ffdp":
+        score_fetcher = FFDPFetcher()
+        click.echo(f"Using Fantasy Football Data Pros API for {season_year} week {week}...")
     else:
         click.echo(f"Unknown fetcher: {fetcher}", err=True)
         raise click.Abort()

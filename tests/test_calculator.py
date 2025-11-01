@@ -1,5 +1,7 @@
 """Tests for calculator module."""
 
+import pytest
+
 from fantasy.calculator import calculate_team_scores, format_team_scores
 from fantasy.models import Player, TeamScore
 from fantasy.score_fetcher import MockScoreFetcher
