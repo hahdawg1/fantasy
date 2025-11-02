@@ -32,19 +32,20 @@ pip install -e ".[dev]"
 
 ### Install with Pinned Dependencies
 
-To install with all direct and transitive dependencies pinned to exact versions (for reproducibility):
+To install in editable mode with all direct and transitive dependencies pinned to exact versions (for reproducibility):
+
+```bash
+pip install -e ".[system.txt]"
+```
+
+This installs the package in editable mode along with all 90 pinned dependencies from `reqs/system.txt`, providing a fully reproducible environment.
+
+Alternatively, if you prefer to install dependencies separately:
 
 ```bash
 pip install -r reqs/system.txt
-```
-
-**Note:** After installing from `reqs/system.txt`, you should still install the package itself in editable mode:
-
-```bash
 pip install -e .
 ```
-
-This ensures you can run the `fantasy` command-line tool.
 
 ### Dependencies
 
