@@ -19,19 +19,32 @@ def calculate_week_score(
     Calculate fantasy scores for all fantasy teams for a given week.
 
     Uses nflreadpy to load player stats and calculates standard fantasy points:
-    - QB: 1 point per 25 passing yards, 4 points per passing TD, -2 per INT, 1 point per 10 rushing yards, 6 points per rushing TD
-    - RB/WR/TE: 1 point per 10 rushing/receiving yards, 6 points per TD, 0.5 points per reception (half-PPR)
+    - QB: 1 point per 25 passing yards, 4 points per passing TD, -2 per INT,
+      1 point per 10 rushing yards, 6 points per rushing TD
+    - RB/WR/TE: 1 point per 10 rushing/receiving yards, 6 points per TD,
+      0.5 points per reception (half-PPR)
 
-    Args:
-        players: List of all players across all fantasy teams
-        week: Week number to calculate scores for
-        season: Season year
+    Parameters
+    ----------
+    players : list[Player]
+        List of all players across all fantasy teams.
+    week : int
+        Week number to calculate scores for.
+    season : int
+        Season year.
 
-    Returns:
-        List of TeamScore objects, one per fantasy team
+    Returns
+    -------
+    list[TeamScore]
+        List of TeamScore objects, one per fantasy team, sorted by total
+        points in descending order.
 
-    Raises:
-        ValueError: If a player's score cannot be found for the specified week
+    Raises
+    ------
+    ValueError
+        If player stats cannot be loaded, required columns are missing,
+        no data exists for the specified week/season, or a player's score
+        cannot be found.
     """
     # Load player stats for the specified week and season
     try:
@@ -133,18 +146,23 @@ def calculate_player_fantasy_points(player_row: dict, position: str) -> float:
     """
     Calculate fantasy points for a player based on their stats.
 
-    Scoring:
+    Scoring rules:
     - QB: 1 pt per 25 passing yards, 4 pts per passing TD, -2 per INT,
-          1 pt per 10 rushing yards, 6 pts per rushing TD
+      1 pt per 10 rushing yards, 6 pts per rushing TD
     - RB/WR/TE: 1 pt per 10 rushing/receiving yards, 6 pts per TD,
-                0.5 pts per reception (half-PPR)
+      0.5 pts per reception (half-PPR)
 
-    Args:
-        player_row: Row from nflreadpy player stats DataFrame
-        position: Player position
+    Parameters
+    ----------
+    player_row : dict
+        Row from nflreadpy player stats DataFrame (as a dictionary/Series).
+    position : str
+        Player position (QB, RB, WR, TE, etc.).
 
-    Returns:
-        Fantasy points total
+    Returns
+    -------
+    float
+        Total fantasy points for the player.
     """
     position = position.upper()
 
@@ -191,11 +209,16 @@ def format_team_scores(team_scores: Iterable[TeamScore]) -> str:
     """
     Format team scores as a human-readable string.
 
-    Args:
-        team_scores: Iterable of TeamScore objects
+    Parameters
+    ----------
+    team_scores : Iterable[TeamScore]
+        Iterable of TeamScore objects to format.
 
-    Returns:
-        Formatted string with team scores
+    Returns
+    -------
+    str
+        Formatted string with team scores, including total points and
+        individual player scores.
     """
     lines = []
     for team_score in team_scores:

@@ -10,14 +10,19 @@ def normalize_name(name: str) -> str:
     """
     Normalize a player name for matching.
 
-    Removes common suffixes, converts to lowercase, and strips whitespace.
-    Handles abbreviated names like "J.Love" by replacing periods with spaces.
+    Removes common suffixes (Jr., Sr., II, III, etc.), converts to lowercase,
+    and strips whitespace. Handles abbreviated names like "J.Love" by replacing
+    periods with spaces.
 
-    Args:
-        name: Player name to normalize
+    Parameters
+    ----------
+    name : str
+        Player name to normalize.
 
-    Returns:
-        Normalized name
+    Returns
+    -------
+    str
+        Normalized player name.
     """
     name = str(name).strip()
     # Remove common suffixes (Jr., Sr., II, III, IV, etc.)
@@ -38,14 +43,22 @@ def fuzzy_match_name(csv_name: str, api_name: str, threshold: float = 0.8) -> bo
     - Exact normalized match
     - One name contains the other
     - First and last name match (in any order)
+    - Handles initials (e.g., "P. Mahomes" matches "Patrick Mahomes")
 
-    Args:
-        csv_name: Name from CSV
-        api_name: Name from API
-        threshold: Similarity threshold (currently unused, for future expansion)
+    Parameters
+    ----------
+    csv_name : str
+        Player name from CSV.
+    api_name : str
+        Player name from API/nflreadpy.
+    threshold : float, optional
+        Similarity threshold (currently unused, reserved for future expansion).
+        Default is 0.8.
 
-    Returns:
-        True if names likely match, False otherwise
+    Returns
+    -------
+    bool
+        True if names likely match, False otherwise.
     """
     csv_normalized = normalize_name(csv_name)
     api_normalized = normalize_name(api_name)
@@ -69,7 +82,19 @@ def fuzzy_match_name(csv_name: str, api_name: str, threshold: float = 0.8) -> bo
     # Remove single characters and single characters with periods (initials)
     # but keep numbers
     def is_initial(word: str) -> bool:
-        """Check if a word is likely an initial."""
+        """
+        Check if a word is likely an initial.
+
+        Parameters
+        ----------
+        word : str
+            Word to check.
+
+        Returns
+        -------
+        bool
+            True if the word is a single character (excluding digits).
+        """
         # Remove periods and check if it's a single character
         word_clean = word.strip(".")
         return len(word_clean) == 1 and not word_clean.isdigit()
@@ -125,16 +150,27 @@ def find_player_match(
     """
     Find a matching player in the nflreadpy stats DataFrame.
 
-    Args:
-        csv_player_name: Player name from CSV
-        csv_player_position: Player position from CSV
-        csv_player_team: Player team abbreviation from CSV
-        player_stats_df: DataFrame from nflreadpy with player stats
-        strict_team_match: If True, requires exact team match. If False, tries team match first,
-                          then falls back to name+position only.
+    Uses fuzzy name matching to handle variations in player name formats
+    between CSV and nflreadpy data.
 
-    Returns:
-        Series with the matched player's stats, or None if no match found
+    Parameters
+    ----------
+    csv_player_name : str
+        Player name from CSV.
+    csv_player_position : str
+        Player position from CSV.
+    csv_player_team : str
+        Player team abbreviation from CSV.
+    player_stats_df : pandas.DataFrame
+        DataFrame from nflreadpy with player stats.
+    strict_team_match : bool, optional
+        If True, requires exact team match. If False, tries team match first,
+        then falls back to name+position only. Default is False.
+
+    Returns
+    -------
+    pandas.Series or None
+        Series with the matched player's stats, or None if no match found.
     """
     csv_position = csv_player_position.upper().strip()
     csv_team = csv_player_team.upper().strip()
@@ -189,13 +225,20 @@ def find_players_in_stats(
     """
     Find multiple players in the stats DataFrame.
 
-    Args:
-        csv_players: List of tuples (player_name, player_position, player_team) from CSV
-        player_stats_df: DataFrame from nflreadpy with player stats
-        strict_team_match: If True, requires exact team match for all players
+    Parameters
+    ----------
+    csv_players : list[tuple[str, str, str]]
+        List of tuples (player_name, player_position, player_team) from CSV.
+    player_stats_df : pandas.DataFrame
+        DataFrame from nflreadpy with player stats.
+    strict_team_match : bool, optional
+        If True, requires exact team match for all players. Default is False.
 
-    Returns:
-        Dictionary mapping (player_name, player_position, player_team) to matched Series
+    Returns
+    -------
+    dict[tuple[str, str, str], pandas.Series]
+        Dictionary mapping (player_name, player_position, player_team) tuples
+        to matched Series from the DataFrame.
     """
     matches = {}
     for player_name, player_position, player_team in csv_players:

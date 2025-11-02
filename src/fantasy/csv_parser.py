@@ -10,21 +10,28 @@ def parse_fantasy_csv(csv_path: str | Path) -> list[Player]:
     """
     Parse a CSV file with fantasy team data.
 
-    Expected columns:
+    The CSV file should contain the following columns:
     - player_name: Name of the player
     - player_team: NFL team abbreviation the player belongs to
     - player_position: Position of the player (e.g., QB, RB, WR, TE)
     - fantasy_team: Name of the fantasy team
 
-    Args:
-        csv_path: Path to the CSV file
+    Parameters
+    ----------
+    csv_path : str or Path
+        Path to the CSV file.
 
-    Returns:
-        List of Player objects
+    Returns
+    -------
+    list[Player]
+        List of Player objects parsed from the CSV file.
 
-    Raises:
-        FileNotFoundError: If the CSV file doesn't exist
-        ValueError: If required columns are missing
+    Raises
+    ------
+    FileNotFoundError
+        If the CSV file doesn't exist.
+    ValueError
+        If required columns are missing from the CSV file.
     """
     csv_path = Path(csv_path)
 

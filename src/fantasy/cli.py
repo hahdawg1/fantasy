@@ -39,7 +39,21 @@ def main(
     """
     Calculate fantasy team scores from a CSV file using nflreadpy.
 
-    The CSV file should have columns: player_name, player_team, player_position, fantasy_team
+    The CSV file should have columns: player_name, player_team, player_position, fantasy_team.
+
+    Parameters
+    ----------
+    csv_file : Path
+        Path to the CSV file containing fantasy team rosters.
+    week : int, optional
+        Week number to calculate scores for. If not provided, uses current week
+        from nflreadpy or defaults to week 1.
+    season : int, optional
+        Season year. If not provided, uses current season from nflreadpy
+        or defaults to current year.
+    output : Path, optional
+        Path to save results as a CSV file. If not provided, results are
+        only displayed to stdout.
     """
     # Determine season if not provided
     if season is None:
