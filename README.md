@@ -12,17 +12,52 @@ A Python application for calculating fantasy football team scores from CSV data 
 
 ## Installation
 
-Install in development mode:
+### Requirements
+
+- Python 3.8 or higher
+
+### Install from Source
+
+Install in development mode (recommended for development):
 
 ```bash
 pip install -e .
 ```
 
-Install with development dependencies:
+Install with development dependencies (includes pytest, ruff, mypy, etc.):
 
 ```bash
 pip install -e ".[dev]"
 ```
+
+### Install with Pinned Dependencies
+
+To install with all direct and transitive dependencies pinned to exact versions (for reproducibility):
+
+```bash
+pip install -r reqs/system.txt
+```
+
+**Note:** After installing from `reqs/system.txt`, you should still install the package itself in editable mode:
+
+```bash
+pip install -e .
+```
+
+This ensures you can run the `fantasy` command-line tool.
+
+### Dependencies
+
+The main dependencies are:
+- `nflreadpy>=0.1.4` - NFL data fetching
+- `pandas>=2.0.0` - Data manipulation
+- `click>=8.0.0` - CLI interface
+
+Optional development dependencies:
+- `pytest>=7.0.0` - Testing framework
+- `pytest-cov>=4.0.0` - Test coverage
+- `ruff>=0.1.0` - Linting
+- `mypy>=1.0.0` - Type checking
 
 ## Usage
 
