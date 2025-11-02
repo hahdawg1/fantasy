@@ -82,22 +82,59 @@ When filling in the `player_team` column, use the following abbreviations that m
 - `STL` - St. Louis Rams (renamed to LAR in 2016)
 - `LA` - Los Angeles Rams (also used as LAR)
 
-Example CSV:
+#### Example
 
+Here's a complete working example. Team Andrew has QB Jordan Love and RB Josh Jacobs. Team Marshall has QB Baker Mayfield and RB James Cook.
+
+**example_teams.csv:**
 ```csv
 player_name,player_team,player_position,fantasy_team
-Patrick Mahomes,KC,QB,Team Alpha
-Aaron Jones,GB,RB,Team Alpha
-Josh Allen,BUF,QB,Team Beta
-Davante Adams,LV,WR,Team Beta
+Jordan Love,GB,QB,Andrew
+Josh Jacobs,GB,RB,Andrew
+Baker Mayfield,TB,QB,Marshall
+James Cook,BUF,RB,Marshall
 ```
+
+**Running the example:**
+
+Calculate scores for week 2 of the 2025 NFL season:
+
+```bash
+fantasy example_teams.csv --week 2 --season 2025
+```
+
+**Output:**
+```
+Parsing CSV file: example_teams.csv
+Found 4 players across 2 teams
+Calculating scores for 2025 week 2...
+
+============================================================
+
+Marshall - 2025 Week 2
+  Total Points: 45.9
+  Player Scores:
+    B.Mayfield (QB, TB): 19.9
+    J.Cook (RB, BUF): 26.0
+
+Andrew - 2025 Week 2
+  Total Points: 35.28
+  Player Scores:
+    J.Love (QB, GB): 20.88
+    J.Jacobs (RB, GB): 14.4
+============================================================
+```
+
+**Notes:**
+- The library automatically matches player names even when formats differ. For example, "Jordan Love" in your CSV will match "J.Love" in nflreadpy data.
+- Player names in the output are displayed as they appear in the nflreadpy data (often abbreviated like "J.Love" or "B.Mayfield").
 
 ### Command Line
 
 Calculate scores for a specific week and season:
 
 ```bash
-fantasy teams.csv --week 5 --season 2023
+fantasy teams.csv --week 2 --season 2025
 ```
 
 Calculate scores for the current week (auto-detected):
@@ -109,7 +146,7 @@ fantasy teams.csv
 Save results to a file:
 
 ```bash
-fantasy teams.csv --week 5 --season 2023 --output results.csv
+fantasy teams.csv --week 2 --season 2025 --output results.csv
 ```
 
 ### Scoring Rules

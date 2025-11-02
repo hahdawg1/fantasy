@@ -7,6 +7,7 @@ import nflreadpy as nfl
 import polars as pl
 
 from fantasy.models import Player, PlayerScore, TeamScore
+from fantasy.player_matcher import find_player_match
 
 
 def calculate_week_score(
@@ -67,73 +68,49 @@ def calculate_week_score(
     for player in players:
         teams_dict[player.fantasy_team].append(player)
 
-    # Helper function to normalize names and teams for matching
-    def normalize_name(name: str) -> str:
-        """Normalize player name for matching."""
-        return name.lower().strip()
-
-    def normalize_team(team: str) -> str:
-        """Normalize team abbreviation for matching."""
-        return team.upper().strip()
-
-    def normalize_position(position: str) -> str:
-        """Normalize position for matching."""
-        return position.upper().strip()
-
-    # Create lookup dictionary for player scores
-    score_lookup: dict[tuple[str, str, str], PlayerScore] = {}
-
-    for _, row in week_stats.iterrows():
-        player_name = str(row.get("player_name", ""))
-        player_team = str(row.get("recent_team", row.get("team", "")))
-        player_position = str(row.get("position", ""))
-
-        # Calculate fantasy points based on position
-        fantasy_points = calculate_player_fantasy_points(row, player_position)
-
-        key = (
-            normalize_name(player_name),
-            normalize_team(player_team),
-            normalize_position(player_position),
-        )
-        score_lookup[key] = PlayerScore(
-            player_name=player_name,
-            player_team=player_team.upper(),
-            player_position=player_position.upper(),
-            week=week,
-            season=season,
-            fantasy_points=round(fantasy_points, 2),
-        )
-
-    # Calculate team scores
+    # Calculate team scores using player matcher
     team_scores = []
     for fantasy_team, team_players in teams_dict.items():
         player_scores = []
         for player in team_players:
-            # Try to find matching score
-            key = (
-                normalize_name(player.player_name),
-                normalize_team(player.player_team),
-                normalize_position(player.player_position),
+            # Use player matcher to find the player in the stats
+            matched_player = find_player_match(
+                player.player_name,
+                player.player_position,
+                player.player_team,
+                week_stats,
+                strict_team_match=False,
             )
-            score = score_lookup.get(key)
 
-            # If not found with exact match, try matching by name and position only
-            # (team might be listed differently)
-            if score is None:
-                for lookup_key, lookup_score in score_lookup.items():
-                    if lookup_key[0] == key[0] and lookup_key[2] == key[2]:
-                        score = lookup_score
-                        break
-
-            if score is None:
+            if matched_player is None:
                 raise ValueError(
                     f"Could not find score for player: {player.player_name} "
                     f"({player.player_position}, {player.player_team}) on {fantasy_team} "
                     f"for {season} week {week}"
                 )
 
-            player_scores.append(score)
+            # Extract player info from matched row
+            api_player_name = str(matched_player.get("player_name", player.player_name))
+            api_player_team = str(
+                matched_player.get("recent_team", matched_player.get("team", player.player_team))
+            )
+            api_player_position = str(
+                matched_player.get("position", player.player_position)
+            )
+
+            # Calculate fantasy points
+            fantasy_points = calculate_player_fantasy_points(matched_player, api_player_position)
+
+            player_score = PlayerScore(
+                player_name=api_player_name,
+                player_team=api_player_team.upper(),
+                player_position=api_player_position.upper(),
+                week=week,
+                season=season,
+                fantasy_points=round(fantasy_points, 2),
+            )
+
+            player_scores.append(player_score)
 
         total_points = sum(ps.fantasy_points for ps in player_scores)
 
