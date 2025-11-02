@@ -1,13 +1,14 @@
 # Fantasy
 
-A Python application for calculating fantasy team scores from CSV data.
+A Python application for calculating fantasy football team scores from CSV data using [nflreadpy](https://github.com/nflverse/nflreadpy).
 
 ## Features
 
 - Parse fantasy team rosters from CSV files
-- Calculate team scores for any week (current or previous)
+- Calculate team scores for any week and season using nflreadpy
 - Support for multiple fantasy teams
-- Extensible score fetching system (currently includes mock fetcher for testing)
+- Standard fantasy scoring rules (half-PPR)
+- CLI interface for easy usage
 
 ## Installation
 
@@ -28,149 +29,81 @@ pip install -e ".[dev]"
 ### CSV Format
 
 Your CSV file should have the following columns:
+- `player_name`: Name of the player
+- `player_team`: NFL team abbreviation (e.g., KC, BUF, GB)
+- `player_position`: Position of the player (QB, RB, WR, TE, etc.)
 - `fantasy_team`: Name of the fantasy team
-- `player name` (or `player_name`): Name of the player
-- `player position` (or `player_position`): Position (e.g., QB, RB, WR, TE)
-- `player team` (or `player_team`): Real team the player belongs to
 
-#### NFL Team Abbreviations
+Example CSV:
 
-When filling in the `player team` column, use the following NFL team abbreviations:
-
-**American Football Conference (AFC)**
-
-*AFC East:*
-- `BUF` - Buffalo Bills
-- `MIA` - Miami Dolphins
-- `NE` - New England Patriots
-- `NYJ` - New York Jets
-
-*AFC North:*
-- `BAL` - Baltimore Ravens
-- `CIN` - Cincinnati Bengals
-- `CLE` - Cleveland Browns
-- `PIT` - Pittsburgh Steelers
-
-*AFC South:*
-- `HOU` - Houston Texans
-- `IND` - Indianapolis Colts
-- `JAX` - Jacksonville Jaguars
-- `TEN` - Tennessee Titans
-
-*AFC West:*
-- `DEN` - Denver Broncos
-- `KC` - Kansas City Chiefs
-- `LV` - Las Vegas Raiders
-- `LAC` - Los Angeles Chargers
-
-**National Football Conference (NFC)**
-
-*NFC East:*
-- `DAL` - Dallas Cowboys
-- `NYG` - New York Giants
-- `PHI` - Philadelphia Eagles
-- `WAS` - Washington Commanders
-
-*NFC North:*
-- `CHI` - Chicago Bears
-- `DET` - Detroit Lions
-- `GB` - Green Bay Packers
-- `MIN` - Minnesota Vikings
-
-*NFC South:*
-- `ATL` - Atlanta Falcons
-- `CAR` - Carolina Panthers
-- `NO` - New Orleans Saints
-- `TB` - Tampa Bay Buccaneers
-
-*NFC West:*
-- `ARI` - Arizona Cardinals
-- `LAR` - Los Angeles Rams
-- `SF` - San Francisco 49ers
-- `SEA` - Seattle Seahawks
+```csv
+player_name,player_team,player_position,fantasy_team
+Patrick Mahomes,KC,QB,Team Alpha
+Aaron Jones,GB,RB,Team Alpha
+Josh Allen,BUF,QB,Team Beta
+Davante Adams,LV,WR,Team Beta
+```
 
 ### Command Line
 
-Calculate scores for a specific week using mock data:
+Calculate scores for a specific week and season:
 
 ```bash
-fantasy teams.csv --week 5
+fantasy teams.csv --week 5 --season 2023
 ```
 
-Calculate scores using the Fantasy Football Data Pros API:
+Calculate scores for the current week (auto-detected):
 
 ```bash
-fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
+fantasy teams.csv
 ```
 
 Save results to a file:
 
 ```bash
-fantasy teams.csv --week 5 --output results.csv --fetcher ffdp
+fantasy teams.csv --week 5 --season 2023 --output results.csv
 ```
 
-Specify season year (required for FFDP fetcher):
+### Scoring Rules
 
-```bash
-fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
-```
+The application uses standard fantasy football scoring:
 
-### Example CSV
+**Quarterbacks (QB):**
+- 1 point per 25 passing yards
+- 4 points per passing touchdown
+- -2 points per interception
+- 1 point per 10 rushing yards
+- 6 points per rushing touchdown
 
-```csv
-fantasy_team,player name,player position,player team
-Team A,Patrick Mahomes,QB,KC
-Team A,Aaron Jones,RB,GB
-Team B,Josh Allen,QB,BUF
-Team B,Davante Adams,WR,LV
-```
+**Running Backs, Wide Receivers, Tight Ends (RB/WR/TE):**
+- 1 point per 10 rushing yards
+- 6 points per rushing touchdown
+- 1 point per 10 receiving yards
+- 6 points per receiving touchdown
+- 0.5 points per reception (half-PPR)
 
 ### Example Output
 
 ```
 ============================================================
 
-Team A - Week 5
-  Total Score: 45.2
+Team Beta - 2023 Week 5
+  Total Points: 85.23
   Player Scores:
-    Patrick Mahomes (QB, KC): 25.1
-    Aaron Jones (RB, GB): 20.1
+    Josh Allen (QB, BUF): 28.5
+    Davante Adams (WR, LV): 27.63
 
-Team B - Week 5
-  Total Score: 38.5
+Team Alpha - 2023 Week 5
+  Total Points: 77.64
   Player Scores:
-    Josh Allen (QB, BUF): 22.3
-    Davante Adams (WR, LV): 16.2
+    Patrick Mahomes (QB, KC): 25.92
+    Aaron Jones (RB, GB): 21.64
 ============================================================
 ```
 
-## Score Fetchers
+## Data Source
 
-The app supports multiple score fetchers:
-
-### Mock Fetcher (default)
-
-The `mock` fetcher generates random scores for testing. Use this when you want to test the application without making API calls.
-
-```bash
-fantasy teams.csv --week 5 --fetcher mock
-```
-
-### Fantasy Football Data Pros (FFDP) API
-
-The `ffdp` fetcher uses the [Fantasy Football Data Pros API](https://www.fantasyfootballdatapros.com/our_api) to fetch real fantasy scores. This API provides historical data going back to 1999.
-
-```bash
-fantasy teams.csv --week 5 --season-year 2024 --fetcher ffdp
-```
-
-**Note:** The FFDP API requires an internet connection. If a player's score cannot be found, the application will raise an error.
-
-**Rate Limiting:** The FFDP fetcher includes built-in rate limiting (0.5 seconds between requests) to avoid overwhelming the API. Responses are cached per week to minimize API calls.
-
-### Implementing Custom Fetchers
-
-To implement a custom score fetcher (e.g., ESPN API, NFL.com API, etc.), create a class that implements the `ScoreFetcher` protocol from `fantasy.score_fetcher` or extends `BaseScoreFetcher`.
+This application uses [nflreadpy](https://github.com/nflverse/nflreadpy), a Python package for downloading NFL data from nflverse repositories. nflreadpy provides comprehensive NFL statistics dating back to 1999.
 
 ## Development
 
@@ -198,3 +131,6 @@ Type checking:
 mypy src/
 ```
 
+## License
+
+MIT License

@@ -5,9 +5,8 @@ from datetime import datetime
 from pathlib import Path
 
 from fantasy.csv_parser import parse_fantasy_csv
-from fantasy.calculator import calculate_team_scores, format_team_scores
-from fantasy.score_fetcher import MockScoreFetcher, ScoreFetcher
-from fantasy.ffdp_fetcher import FFDPFetcher
+from fantasy.calculator import calculate_week_score, format_team_scores
+import nflreadpy as nfl
 
 
 @click.command()
@@ -19,10 +18,10 @@ from fantasy.ffdp_fetcher import FFDPFetcher
     help="Week number to calculate scores for. If not provided, uses current week.",
 )
 @click.option(
-    "--season-year",
-    "-y",
+    "--season",
+    "-s",
     type=int,
-    help="Season year (defaults to current year)",
+    help="Season year (defaults to current season from nflreadpy)",
     default=None,
 )
 @click.option(
@@ -31,91 +30,65 @@ from fantasy.ffdp_fetcher import FFDPFetcher
     type=click.Path(path_type=Path),
     help="Output file path for results (CSV format)",
 )
-@click.option(
-    "--fetcher",
-    type=click.Choice(["mock", "ffdp"], case_sensitive=False),
-    default="mock",
-    help="Score fetcher to use: 'mock' for testing, 'ffdp' for Fantasy Football Data Pros API (default: mock)",
-    show_default=True,
-)
 def main(
     csv_file: Path,
     week: int | None,
-    season_year: int | None,
+    season: int | None,
     output: Path | None,
-    fetcher: str,
 ) -> None:
     """
-    Calculate fantasy team scores from a CSV file.
+    Calculate fantasy team scores from a CSV file using nflreadpy.
 
-    The CSV file should have columns: fantasy_team, player name, player position, player team
+    The CSV file should have columns: player_name, player_team, player_position, fantasy_team
     """
-    # Determine week if not provided (default to current week)
-    if week is None:
-        # For now, default to week 1. In a real implementation, you'd determine
-        # the current week based on the current date and season start
-        current_date = datetime.now()
-        # Simple heuristic: assume season starts around September 1st
-        if current_date.month >= 9:
-            # Rough estimate: week = (day of year - 244) // 7 + 1
-            # This is approximate and should be replaced with actual season data
-            week = 1  # Default fallback
+    # Determine season if not provided
+    if season is None:
+        try:
+            season = nfl.get_current_season()
+            click.echo(f"Using current season: {season}")
+        except Exception:
+            # Fallback to current year
+            season = datetime.now().year
             click.echo(
-                "Warning: Week not specified. Using week 1. "
-                "Please specify --week for accurate results.",
+                f"Warning: Could not get current season from nflreadpy. Using {season}.",
                 err=True,
             )
-        else:
+
+    # Determine week if not provided
+    if week is None:
+        try:
+            week = nfl.get_current_week()
+            click.echo(f"Using current week: {week}")
+        except Exception:
             week = 1
             click.echo(
-                "Warning: Week not specified. Using week 1. "
+                "Warning: Week not specified and could not determine current week. Using week 1. "
                 "Please specify --week for accurate results.",
                 err=True,
             )
-
-    if season_year is None:
-        season_year = datetime.now().year
 
     # Parse CSV
     click.echo(f"Parsing CSV file: {csv_file}")
     try:
         players = parse_fantasy_csv(csv_file)
-        click.echo(f"Found {len(players)} players across {len(set(p.fantasy_team for p in players))} teams")
+        click.echo(
+            f"Found {len(players)} players across {len(set(p.fantasy_team for p in players))} teams"
+        )
     except Exception as e:
         click.echo(f"Error parsing CSV: {e}", err=True)
         raise click.Abort()
 
-    # Initialize score fetcher
-    score_fetcher: ScoreFetcher
-    if fetcher == "mock":
-        score_fetcher = MockScoreFetcher()
+    # Calculate scores
+    click.echo(f"Calculating scores for {season} week {week}...")
+    try:
+        team_scores = calculate_week_score(players, week, season)
+    except ValueError as e:
         click.echo(
-            "Warning: Using mock score fetcher. Scores are randomly generated for testing.",
+            f"Error calculating scores: {e}\n"
+            f"This might indicate that nflreadpy has no data for {season} week {week}. "
+            f"Try using a different season/year or week.",
             err=True,
         )
-    elif fetcher == "ffdp":
-        score_fetcher = FFDPFetcher()
-        click.echo(f"Using Fantasy Football Data Pros API for {season_year} week {week}...")
-    else:
-        click.echo(f"Unknown fetcher: {fetcher}", err=True)
-        raise click.Abort()
-
-    # Calculate scores
-    click.echo(f"Calculating scores for week {week}...")
-    try:
-        team_scores = calculate_team_scores(players, week, score_fetcher, season_year)
-    except ValueError as e:
-        # Player not found error - might be due to API unavailability
-        error_msg = str(e)
-        if fetcher == "ffdp" and "Could not find score" in error_msg:
-            click.echo(
-                f"Error: {error_msg}\n"
-                f"This might indicate that the FFDP API has no data for {season_year} week {week}. "
-                f"Try using a different season/year or week.",
-                err=True,
-            )
-        else:
-            click.echo(f"Error calculating scores: {e}", err=True)
         raise click.Abort()
     except Exception as e:
         click.echo(f"Error calculating scores: {e}", err=True)
@@ -137,12 +110,13 @@ def main(
                 rows.append(
                     {
                         "fantasy_team": ts.fantasy_team,
+                        "season": ts.season,
                         "week": ts.week,
                         "player_name": ps.player_name,
-                        "position": ps.position,
-                        "team": ps.team,
-                        "score": ps.score,
-                        "team_total": ts.total_score,
+                        "player_position": ps.player_position,
+                        "player_team": ps.player_team,
+                        "fantasy_points": ps.fantasy_points,
+                        "team_total": ts.total_points,
                     }
                 )
 

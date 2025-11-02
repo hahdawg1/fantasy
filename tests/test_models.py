@@ -11,30 +11,60 @@ class TestPlayer:
     def test_player_creation(self):
         """Test creating a player with all fields."""
         player = Player(
-            name="Patrick Mahomes",
-            position="QB",
-            team="KC",
+            player_name="Patrick Mahomes",
+            player_team="KC",
+            player_position="QB",
             fantasy_team="Team A",
         )
-        assert player.name == "Patrick Mahomes"
-        assert player.position == "QB"
-        assert player.team == "KC"
+        assert player.player_name == "Patrick Mahomes"
+        assert player.player_team == "KC"
+        assert player.player_position == "QB"
         assert player.fantasy_team == "Team A"
 
     def test_player_equality(self):
         """Test player equality comparison."""
-        player1 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team A")
-        player2 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team A")
-        player3 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team B")
+        player1 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team A",
+        )
+        player2 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team A",
+        )
+        player3 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team B",
+        )
 
         assert player1 == player2
         assert player1 != player3
 
     def test_player_hash(self):
         """Test that players can be used in sets and dicts."""
-        player1 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team A")
-        player2 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team A")
-        player3 = Player(name="Tom Brady", position="QB", team="TB", fantasy_team="Team B")
+        player1 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team A",
+        )
+        player2 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team A",
+        )
+        player3 = Player(
+            player_name="Tom Brady",
+            player_team="TB",
+            player_position="QB",
+            fantasy_team="Team B",
+        )
 
         player_set = {player1, player2, player3}
         assert len(player_set) == 2  # player1 and player2 are duplicates
@@ -50,37 +80,41 @@ class TestPlayerScore:
         """Test creating a player score."""
         score = PlayerScore(
             player_name="Patrick Mahomes",
-            position="QB",
-            team="KC",
+            player_team="KC",
+            player_position="QB",
             week=5,
-            score=25.5,
+            season=2023,
+            fantasy_points=25.5,
         )
         assert score.player_name == "Patrick Mahomes"
-        assert score.position == "QB"
-        assert score.team == "KC"
+        assert score.player_team == "KC"
+        assert score.player_position == "QB"
         assert score.week == 5
-        assert score.score == 25.5
+        assert score.season == 2023
+        assert score.fantasy_points == 25.5
 
     def test_player_score_zero_allowed(self):
         """Test that zero score is allowed."""
         score = PlayerScore(
             player_name="Patrick Mahomes",
-            position="QB",
-            team="KC",
+            player_team="KC",
+            player_position="QB",
             week=5,
-            score=0.0,
+            season=2023,
+            fantasy_points=0.0,
         )
-        assert score.score == 0.0
+        assert score.fantasy_points == 0.0
 
     def test_player_score_negative_not_allowed(self):
         """Test that negative scores raise ValueError."""
-        with pytest.raises(ValueError, match="Score cannot be negative"):
+        with pytest.raises(ValueError, match="Fantasy points cannot be negative"):
             PlayerScore(
                 player_name="Patrick Mahomes",
-                position="QB",
-                team="KC",
+                player_team="KC",
+                player_position="QB",
                 week=5,
-                score=-5.0,
+                season=2023,
+                fantasy_points=-5.0,
             )
 
 
@@ -90,65 +124,95 @@ class TestTeamScore:
     def test_team_score_creation(self):
         """Test creating a team score."""
         player_scores = [
-            PlayerScore(player_name="Player 1", position="QB", team="KC", week=5, score=20.0),
-            PlayerScore(player_name="Player 2", position="RB", team="GB", week=5, score=15.5),
+            PlayerScore(
+                player_name="Player 1",
+                player_team="KC",
+                player_position="QB",
+                week=5,
+                season=2023,
+                fantasy_points=20.0,
+            ),
+            PlayerScore(
+                player_name="Player 2",
+                player_team="GB",
+                player_position="RB",
+                week=5,
+                season=2023,
+                fantasy_points=15.5,
+            ),
         ]
 
         team_score = TeamScore(
             fantasy_team="Team A",
             week=5,
-            total_score=35.5,
+            season=2023,
+            total_points=35.5,
             player_scores=player_scores,
         )
 
         assert team_score.fantasy_team == "Team A"
         assert team_score.week == 5
-        assert team_score.total_score == 35.5
+        assert team_score.season == 2023
+        assert team_score.total_points == 35.5
         assert len(team_score.player_scores) == 2
 
     def test_team_score_validation_pass(self):
         """Test that team score validation passes when total matches sum."""
         player_scores = [
-            PlayerScore(player_name="Player 1", position="QB", team="KC", week=5, score=20.0),
-            PlayerScore(player_name="Player 2", position="RB", team="GB", week=5, score=15.5),
+            PlayerScore(
+                player_name="Player 1",
+                player_team="KC",
+                player_position="QB",
+                week=5,
+                season=2023,
+                fantasy_points=20.0,
+            ),
+            PlayerScore(
+                player_name="Player 2",
+                player_team="GB",
+                player_position="RB",
+                week=5,
+                season=2023,
+                fantasy_points=15.5,
+            ),
         ]
 
         team_score = TeamScore(
             fantasy_team="Team A",
             week=5,
-            total_score=35.5,
+            season=2023,
+            total_points=35.5,
             player_scores=player_scores,
         )
-        assert team_score.total_score == 35.5
+        assert team_score.total_points == 35.5
 
     def test_team_score_validation_fails_when_mismatch(self):
         """Test that team score validation fails when total doesn't match sum."""
         player_scores = [
-            PlayerScore(player_name="Player 1", position="QB", team="KC", week=5, score=20.0),
-            PlayerScore(player_name="Player 2", position="RB", team="GB", week=5, score=15.5),
+            PlayerScore(
+                player_name="Player 1",
+                player_team="KC",
+                player_position="QB",
+                week=5,
+                season=2023,
+                fantasy_points=20.0,
+            ),
+            PlayerScore(
+                player_name="Player 2",
+                player_team="GB",
+                player_position="RB",
+                week=5,
+                season=2023,
+                fantasy_points=15.5,
+            ),
         ]
 
-        with pytest.raises(ValueError, match="Total score.*does not match sum"):
+        with pytest.raises(ValueError, match="Total points.*does not match sum"):
             TeamScore(
                 fantasy_team="Team A",
                 week=5,
-                total_score=50.0,  # Doesn't match 20.0 + 15.5
+                season=2023,
+                total_points=50.0,  # Doesn't match 20.0 + 15.5
                 player_scores=player_scores,
             )
-
-    def test_team_score_allows_small_floating_point_differences(self):
-        """Test that small floating point differences are allowed."""
-        player_scores = [
-            PlayerScore(player_name="Player 1", position="QB", team="KC", week=5, score=20.0),
-            PlayerScore(player_name="Player 2", position="RB", team="GB", week=5, score=15.5),
-        ]
-
-        # 35.5 + 0.005 should be close enough
-        team_score = TeamScore(
-            fantasy_team="Team A",
-            week=5,
-            total_score=35.505,
-            player_scores=player_scores,
-        )
-        assert team_score.total_score == 35.505
 

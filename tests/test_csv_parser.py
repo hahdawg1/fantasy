@@ -12,30 +12,22 @@ from fantasy.models import Player
 class TestCSVParser:
     """Tests for CSV parser."""
 
-    def test_parse_valid_csv_with_spaces(self, csv_file_with_teams):
-        """Test parsing a valid CSV file with spaces in column names."""
+    def test_parse_valid_csv(self, csv_file_with_teams):
+        """Test parsing a valid CSV file."""
         players = parse_fantasy_csv(csv_file_with_teams)
 
         assert len(players) == 4
 
         # Check first player
-        assert players[0].name == "Patrick Mahomes"
-        assert players[0].position == "QB"
-        assert players[0].team == "KC"
+        assert players[0].player_name == "Patrick Mahomes"
+        assert players[0].player_position == "QB"
+        assert players[0].player_team == "KC"
         assert players[0].fantasy_team == "Team Alpha"
 
         # Check that all positions are uppercase
         for player in players:
-            assert player.position == player.position.upper()
-
-    def test_parse_csv_with_underscores(self, csv_file_with_underscores_in_columns):
-        """Test parsing CSV with underscores in column names."""
-        players = parse_fantasy_csv(csv_file_with_underscores_in_columns)
-
-        assert len(players) == 2
-        assert players[0].name == "Derrick Henry"
-        assert players[0].position == "RB"
-        assert players[1].name == "Justin Jefferson"
+            assert player.player_position == player.player_position.upper()
+            assert player.player_team == player.player_team.upper()
 
     def test_parse_nonexistent_file(self):
         """Test that parsing a nonexistent file raises FileNotFoundError."""
@@ -44,7 +36,7 @@ class TestCSVParser:
 
     def test_parse_csv_missing_columns(self):
         """Test that missing required columns raise ValueError."""
-        content = "fantasy_team,player_name\nTeam A,Player 1"
+        content = "player_name,player_team\nPatrick Mahomes,KC"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(content)
             temp_path = Path(f.name)
@@ -57,10 +49,10 @@ class TestCSVParser:
 
     def test_parse_csv_with_empty_rows(self):
         """Test that empty rows are filtered out."""
-        content = """fantasy_team,player name,player position,player team
-Team A,Player 1,Qb,KC
+        content = """player_name,player_team,player_position,fantasy_team
+Patrick Mahomes,KC,QB,Team A
 , , ,
-Team B,Player 2,RB,GB
+Josh Allen,BUF,QB,Team B
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(content)
@@ -75,10 +67,10 @@ Team B,Player 2,RB,GB
 
     def test_parse_csv_normalizes_position(self):
         """Test that positions are normalized to uppercase."""
-        content = """fantasy_team,player name,player position,player team
-Team A,Player 1,qb,KC
-Team A,Player 2,rb,GB
-Team A,Player 3,Wr,LAR
+        content = """player_name,player_team,player_position,fantasy_team
+Patrick Mahomes,KC,qb,Team A
+Aaron Jones,GB,rb,Team A
+Cooper Kupp,LAR,Wr,Team A
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(content)
@@ -86,16 +78,16 @@ Team A,Player 3,Wr,LAR
 
         try:
             players = parse_fantasy_csv(temp_path)
-            assert players[0].position == "QB"
-            assert players[1].position == "RB"
-            assert players[2].position == "WR"
+            assert players[0].player_position == "QB"
+            assert players[1].player_position == "RB"
+            assert players[2].player_position == "WR"
         finally:
             temp_path.unlink(missing_ok=True)
 
     def test_parse_csv_strips_whitespace(self):
         """Test that whitespace is stripped from values."""
-        content = """fantasy_team,player name,player position,player team
- Team A , Patrick Mahomes , QB , KC 
+        content = """player_name,player_team,player_position,fantasy_team
+ Patrick Mahomes , KC , QB , Team A 
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(content)
@@ -104,9 +96,9 @@ Team A,Player 3,Wr,LAR
         try:
             players = parse_fantasy_csv(temp_path)
             assert players[0].fantasy_team == "Team A"
-            assert players[0].name == "Patrick Mahomes"
-            assert players[0].position == "QB"
-            assert players[0].team == "KC"
+            assert players[0].player_name == "Patrick Mahomes"
+            assert players[0].player_position == "QB"
+            assert players[0].player_team == "KC"
         finally:
             temp_path.unlink(missing_ok=True)
 

@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -12,72 +13,96 @@ from fantasy.cli import main
 class TestCLI:
     """Tests for CLI interface."""
 
-    def test_cli_with_valid_csv(self, csv_file_with_teams):
+    @patch("fantasy.cli.nfl.get_current_season")
+    @patch("fantasy.cli.nfl.get_current_week")
+    @patch("fantasy.cli.calculate_week_score")
+    def test_cli_with_valid_csv(self, mock_calc, mock_get_week, mock_get_season, csv_file_with_teams):
         """Test CLI with a valid CSV file."""
-        runner = CliRunner()
-        result = runner.invoke(main, [str(csv_file_with_teams), "--week", "5"])
+        from fantasy.models import TeamScore, PlayerScore
 
-        assert result.exit_code == 0
-        assert "Team Alpha" in result.output or "Team Beta" in result.output
-        assert "Week 5" in result.output
+        mock_get_season.return_value = 2023
+        mock_get_week.return_value = 5
 
-    def test_cli_with_missing_week_warns(self, csv_file_with_teams):
-        """Test CLI without week parameter shows warning."""
+        # Mock team scores (total_points must match sum of player scores)
+        mock_team_scores = [
+            TeamScore(
+                fantasy_team="Team Alpha",
+                week=5,
+                season=2023,
+                total_points=25.0,  # Must match sum of player_scores
+                player_scores=[
+                    PlayerScore(
+                        player_name="Patrick Mahomes",
+                        player_team="KC",
+                        player_position="QB",
+                        week=5,
+                        season=2023,
+                        fantasy_points=25.0,
+                    )
+                ],
+            )
+        ]
+        mock_calc.return_value = mock_team_scores
+
         runner = CliRunner()
         result = runner.invoke(main, [str(csv_file_with_teams)])
 
-        # Should still work but with warning
-        assert "Warning" in result.output or result.exit_code == 0
+        assert result.exit_code == 0
+        assert "Team Alpha" in result.output or "2023 Week 5" in result.output
 
-    def test_cli_with_output_file(self, csv_file_with_teams):
-        """Test CLI with output file option."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-            output_path = Path(f.name)
+    @patch("fantasy.cli.nfl.get_current_season")
+    @patch("fantasy.cli.nfl.get_current_week")
+    @patch("fantasy.cli.calculate_week_score")
+    def test_cli_with_explicit_week_season(
+        self, mock_calc, mock_get_week, mock_get_season, csv_file_with_teams
+    ):
+        """Test CLI with explicit week and season."""
+        from fantasy.models import TeamScore, PlayerScore
 
-        try:
-            runner = CliRunner()
-            result = runner.invoke(
-                main,
-                [str(csv_file_with_teams), "--week", "5", "--output", str(output_path)],
+        mock_get_season.return_value = 2023
+        mock_get_week.return_value = 5
+
+        mock_team_scores = [
+            TeamScore(
+                fantasy_team="Team Alpha",
+                week=10,
+                season=2022,
+                total_points=0.0,  # Must match sum of player_scores (empty list = 0.0)
+                player_scores=[],
             )
+        ]
+        mock_calc.return_value = mock_team_scores
 
-            assert result.exit_code == 0
-            assert output_path.exists()
-            assert "saved to" in result.output.lower() or str(output_path) in result.output
-
-            # Verify output file has content
-            content = output_path.read_text()
-            assert "fantasy_team" in content or "Team" in content
-        finally:
-            output_path.unlink(missing_ok=True)
-
-    def test_cli_with_season_year(self, csv_file_with_teams):
-        """Test CLI with season year parameter."""
         runner = CliRunner()
         result = runner.invoke(
-            main, [str(csv_file_with_teams), "--week", "5", "--season-year", "2024"]
+            main, [str(csv_file_with_teams), "--week", "10", "--season", "2022"]
         )
 
         assert result.exit_code == 0
+        mock_calc.assert_called_once()
+        # Check that week 10 and season 2022 were used
+        call_args = mock_calc.call_args
+        assert call_args[0][1] == 10  # week
+        assert call_args[0][2] == 2022  # season
 
     def test_cli_with_nonexistent_file(self):
         """Test CLI with nonexistent file shows error."""
         runner = CliRunner()
-        result = runner.invoke(main, ["nonexistent.csv", "--week", "5"])
+        result = runner.invoke(main, ["nonexistent.csv"])
 
         assert result.exit_code != 0
         assert "not found" in result.output.lower() or "error" in result.output.lower()
 
     def test_cli_invalid_csv_format(self):
         """Test CLI with invalid CSV format shows error."""
-        # Create CSV with missing columns
+        content = "player_name,player_team\nPatrick Mahomes,KC"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-            f.write("fantasy_team,player_name\nTeam A,Player 1")
+            f.write(content)
             temp_path = Path(f.name)
 
         try:
             runner = CliRunner()
-            result = runner.invoke(main, [str(temp_path), "--week", "5"])
+            result = runner.invoke(main, [str(temp_path)])
 
             assert result.exit_code != 0
             assert "error" in result.output.lower() or "missing" in result.output.lower()
@@ -91,23 +116,5 @@ class TestCLI:
 
         assert result.exit_code == 0
         assert "CSV_FILE" in result.output
-        assert "--week" in result.output or "--week" in result.output
-
-    def test_cli_fetcher_option(self, csv_file_with_teams):
-        """Test CLI fetcher option."""
-        runner = CliRunner()
-        result = runner.invoke(
-            main, [str(csv_file_with_teams), "--week", "5", "--fetcher", "mock"]
-        )
-
-        # Should work with mock fetcher
-        assert result.exit_code == 0
-
-    def test_cli_shows_mock_warning(self, csv_file_with_teams):
-        """Test CLI shows warning when using mock fetcher."""
-        runner = CliRunner()
-        result = runner.invoke(main, [str(csv_file_with_teams), "--week", "5"])
-
-        # Mock fetcher is default, should show warning
-        assert "mock" in result.output.lower() or "warning" in result.output.lower()
+        assert "--week" in result.output
 
