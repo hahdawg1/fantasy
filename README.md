@@ -30,9 +30,57 @@ pip install -e ".[dev]"
 
 Your CSV file should have the following columns:
 - `player_name`: Name of the player
-- `player_team`: NFL team abbreviation (e.g., KC, BUF, GB)
+- `player_team`: NFL team abbreviation (see list below for valid abbreviations)
 - `player_position`: Position of the player (QB, RB, WR, TE, etc.)
 - `fantasy_team`: Name of the fantasy team
+
+#### NFL Team Abbreviations
+
+When filling in the `player_team` column, use the following abbreviations that match nflreadpy's data format:
+
+**Current Teams:**
+
+*American Football Conference (AFC):*
+- `BUF` - Buffalo Bills
+- `MIA` - Miami Dolphins
+- `NE` - New England Patriots
+- `NYJ` - New York Jets
+- `BAL` - Baltimore Ravens
+- `CIN` - Cincinnati Bengals
+- `CLE` - Cleveland Browns
+- `PIT` - Pittsburgh Steelers
+- `HOU` - Houston Texans
+- `IND` - Indianapolis Colts
+- `JAX` - Jacksonville Jaguars
+- `TEN` - Tennessee Titans
+- `DEN` - Denver Broncos
+- `KC` - Kansas City Chiefs
+- `LV` - Las Vegas Raiders
+- `LAC` - Los Angeles Chargers
+
+*National Football Conference (NFC):*
+- `DAL` - Dallas Cowboys
+- `NYG` - New York Giants
+- `PHI` - Philadelphia Eagles
+- `WAS` - Washington Commanders
+- `CHI` - Chicago Bears
+- `DET` - Detroit Lions
+- `GB` - Green Bay Packers
+- `MIN` - Minnesota Vikings
+- `ATL` - Atlanta Falcons
+- `CAR` - Carolina Panthers
+- `NO` - New Orleans Saints
+- `TB` - Tampa Bay Buccaneers
+- `ARI` - Arizona Cardinals
+- `LAR` - Los Angeles Rams
+- `SF` - San Francisco 49ers
+- `SEA` - Seattle Seahawks
+
+**Historical Team Abbreviations** (for older seasons):
+- `OAK` - Oakland Raiders (renamed to LV in 2020)
+- `SD` - San Diego Chargers (renamed to LAC in 2017)
+- `STL` - St. Louis Rams (renamed to LAR in 2016)
+- `LA` - Los Angeles Rams (also used as LAR)
 
 Example CSV:
 
