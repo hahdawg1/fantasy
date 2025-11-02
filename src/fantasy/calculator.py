@@ -36,10 +36,16 @@ def calculate_team_scores(
     # Fetch scores for all players
     all_scores = score_fetcher.fetch_player_scores(players, week, season_year)
 
+    # Helper function to normalize keys for matching (case-insensitive)
+    def normalize_key(name: str, position: str, team: str) -> tuple[str, str, str]:
+        """Normalize player key for matching."""
+        return (name.lower().strip(), position.upper().strip(), team.upper().strip())
+
     # Group scores by player name, position, team (for matching)
+    # Use normalized keys to handle team abbreviation variations (KC vs KAN, etc.)
     score_lookup: dict[tuple[str, str, str], PlayerScore] = {}
     for score in all_scores:
-        key = (score.player_name, score.position, score.team)
+        key = normalize_key(score.player_name, score.position, score.team)
         score_lookup[key] = score
 
     # Calculate team scores
@@ -47,9 +53,20 @@ def calculate_team_scores(
     for fantasy_team, team_players in teams_dict.items():
         player_scores = []
         for player in team_players:
-            # Try to find matching score
-            key = (player.name, player.position, player.team)
+            # Try to find matching score using normalized key
+            key = normalize_key(player.name, player.position, player.team)
             score = score_lookup.get(key)
+            
+            # If not found with exact match, try matching just by name and position
+            # (in case team abbreviations differ)
+            if score is None:
+                for lookup_key, lookup_score in score_lookup.items():
+                    if (
+                        lookup_key[0] == key[0]  # name matches
+                        and lookup_key[1] == key[1]  # position matches
+                    ):
+                        score = lookup_score
+                        break
 
             if score is None:
                 # Player score not found, raise an error

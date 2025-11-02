@@ -104,6 +104,19 @@ def main(
     click.echo(f"Calculating scores for week {week}...")
     try:
         team_scores = calculate_team_scores(players, week, score_fetcher, season_year)
+    except ValueError as e:
+        # Player not found error - might be due to API unavailability
+        error_msg = str(e)
+        if fetcher == "ffdp" and "Could not find score" in error_msg:
+            click.echo(
+                f"Error: {error_msg}\n"
+                f"This might indicate that the FFDP API has no data for {season_year} week {week}. "
+                f"Try using a different season/year or week.",
+                err=True,
+            )
+        else:
+            click.echo(f"Error calculating scores: {e}", err=True)
+        raise click.Abort()
     except Exception as e:
         click.echo(f"Error calculating scores: {e}", err=True)
         raise click.Abort()

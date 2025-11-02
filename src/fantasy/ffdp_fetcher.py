@@ -68,6 +68,19 @@ class FFDPFetcher(BaseScoreFetcher):
                 f"Failed to fetch data from FFDP API for {season_year} week {week}: {e}"
             ) from e
 
+        # Handle error messages from API
+        if isinstance(data, dict) and "msg" in data:
+            # API returned an error message (e.g., "No data available")
+            raise requests.RequestException(
+                f"FFDP API error for {season_year} week {week}: {data.get('msg', 'Unknown error')}"
+            )
+
+        # Ensure data is a list
+        if not isinstance(data, list):
+            raise requests.RequestException(
+                f"Unexpected response format from FFDP API for {season_year} week {week}: expected list, got {type(data)}"
+            )
+
         # Cache the response
         self._cache[cache_key] = data
 
@@ -85,17 +98,35 @@ class FFDPFetcher(BaseScoreFetcher):
         """
         return name.lower().strip()
 
+    # Mapping from common team abbreviations to FFDP API team abbreviations
+    TEAM_MAPPING = {
+        "KC": "KAN",  # Kansas City Chiefs
+        "NE": "NWE",  # New England Patriots
+        "NO": "NOR",  # New Orleans Saints
+        "SF": "SFO",  # San Francisco 49ers
+        "GB": "GNB",  # Green Bay Packers
+        "TB": "TAM",  # Tampa Bay Buccaneers
+        "LV": "OAK",  # Las Vegas Raiders (was Oakland in 2019)
+        "LAR": "LAR",  # Los Angeles Rams
+        "LAC": "LAC",  # Los Angeles Chargers
+        # Add more mappings as needed
+    }
+
     def _normalize_team(self, team: str) -> str:
         """
         Normalize team abbreviation for matching.
+
+        Maps common abbreviations to FFDP API format.
 
         Args:
             team: Team abbreviation to normalize
 
         Returns:
-            Normalized team abbreviation (uppercase, stripped)
+            Normalized team abbreviation (uppercase, stripped) in FFDP format
         """
-        return team.upper().strip()
+        team = team.upper().strip()
+        # Map to FFDP format if mapping exists, otherwise return as-is
+        return self.TEAM_MAPPING.get(team, team)
 
     def _normalize_position(self, position: str) -> str:
         """
@@ -123,13 +154,14 @@ class FFDPFetcher(BaseScoreFetcher):
             Player data dictionary if found, None otherwise
         """
         normalized_name = self._normalize_name(player.name)
+        # Normalize the player's team using our mapping
         normalized_team = self._normalize_team(player.team)
         normalized_position = self._normalize_position(player.position)
 
         for player_data in week_data:
-            # Try to match by name, team, and position
+            # Get API team (already in FFDP format) - just normalize case
+            api_team = player_data.get("team", "").upper().strip()
             api_name = self._normalize_name(player_data.get("player_name", ""))
-            api_team = self._normalize_team(player_data.get("team", ""))
             api_position = self._normalize_position(player_data.get("position", ""))
 
             # Match name (exact or partial) and team
@@ -146,7 +178,7 @@ class FFDPFetcher(BaseScoreFetcher):
         # Try again with just name and team (position might be different format)
         for player_data in week_data:
             api_name = self._normalize_name(player_data.get("player_name", ""))
-            api_team = self._normalize_team(player_data.get("team", ""))
+            api_team = player_data.get("team", "").upper().strip()
 
             if (
                 normalized_name in api_name or api_name in normalized_name
@@ -174,8 +206,9 @@ class FFDPFetcher(BaseScoreFetcher):
 
         try:
             week_data = self._fetch_week_data(week, season_year)
-        except requests.RequestException:
+        except requests.RequestException as e:
             # Return None if API call fails - let calculator raise error
+            # The calculator will detect missing players and raise an appropriate error
             return None
 
         player_data = self._find_player_in_data(player, week_data)
@@ -184,16 +217,39 @@ class FFDPFetcher(BaseScoreFetcher):
             return None
 
         # Extract fantasy score from API response
-        # FFDP API typically uses 'fantasy_points' or 'pts' field
+        # FFDP API uses 'fantasy_points' which can be a dict with 'standard', 'ppr', 'half_ppr'
+        # or sometimes a simple float value
         score = None
-        for field in ["fantasy_points", "pts", "points", "fantasy_pts", "score"]:
-            if field in player_data:
-                score_value = player_data[field]
+        
+        # First, try fantasy_points (most common)
+        if "fantasy_points" in player_data:
+            fantasy_points = player_data["fantasy_points"]
+            if isinstance(fantasy_points, dict):
+                # Prefer standard scoring, fall back to ppr or half_ppr
+                for scoring_type in ["standard", "ppr", "half_ppr"]:
+                    if scoring_type in fantasy_points:
+                        try:
+                            score = float(fantasy_points[scoring_type])
+                            break
+                        except (ValueError, TypeError):
+                            continue
+            else:
+                # It's a simple float
                 try:
-                    score = float(score_value)
-                    break
+                    score = float(fantasy_points)
                 except (ValueError, TypeError):
-                    continue
+                    pass
+        
+        # Fallback to other possible field names
+        if score is None:
+            for field in ["pts", "points", "fantasy_pts", "score"]:
+                if field in player_data:
+                    score_value = player_data[field]
+                    try:
+                        score = float(score_value)
+                        break
+                    except (ValueError, TypeError):
+                        continue
 
         if score is None:
             # Couldn't find score field
