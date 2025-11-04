@@ -187,7 +187,19 @@ fantasy teams.csv --week 2 --season 2025 --output results.csv
 
 ### Scoring Rules
 
-The application uses standard fantasy football scoring:
+The application uses standard fantasy football scoring with optimal lineup selection.
+
+#### Lineup Requirements
+
+Each fantasy team must start a lineup of:
+- **1 Quarterback (QB)** - the highest scoring QB from your roster
+- **1 Running Back (RB)** - the highest scoring RB from your roster
+- **2 Wide Receivers (WR)** - the 2 highest scoring WRs from your roster
+- **1 Tight End (TE)** - the highest scoring TE from your roster
+
+The application automatically selects the optimal lineup for each team based on actual weekly performance. If a team has multiple players at a position, only the highest scoring player(s) are used in the team's total score.
+
+#### Point Scoring
 
 **Quarterbacks (QB):**
 - 1 point per 25 passing yards

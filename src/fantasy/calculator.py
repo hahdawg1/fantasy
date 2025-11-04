@@ -10,6 +10,64 @@ from fantasy.models import Player, PlayerScore, TeamScore
 from fantasy.player_matcher import find_player_match
 
 
+def select_optimal_lineup(player_scores: list[PlayerScore]) -> list[PlayerScore]:
+    """
+    Select the optimal lineup from a list of player scores.
+
+    Lineup requirements:
+    - 1 QB (highest scoring)
+    - 1 RB (highest scoring)
+    - 2 WRs (2 highest scoring)
+    - 1 TE (highest scoring)
+
+    Parameters
+    ----------
+    player_scores : list[PlayerScore]
+        List of all player scores for a team.
+
+    Returns
+    -------
+    list[PlayerScore]
+        List of selected player scores that make up the optimal lineup,
+        sorted by position (QB, RB, WR, WR, TE) then by points.
+    """
+    # Group players by position
+    qbs = [ps for ps in player_scores if ps.player_position == "QB"]
+    rbs = [ps for ps in player_scores if ps.player_position == "RB"]
+    wrs = [ps for ps in player_scores if ps.player_position == "WR"]
+    tes = [ps for ps in player_scores if ps.player_position == "TE"]
+
+    optimal_lineup = []
+
+    # Select 1 QB (highest scoring)
+    if qbs:
+        qbs.sort(key=lambda ps: ps.fantasy_points, reverse=True)
+        optimal_lineup.append(qbs[0])
+
+    # Select 1 RB (highest scoring)
+    if rbs:
+        rbs.sort(key=lambda ps: ps.fantasy_points, reverse=True)
+        optimal_lineup.append(rbs[0])
+
+    # Select 2 WRs (2 highest scoring)
+    if wrs:
+        wrs.sort(key=lambda ps: ps.fantasy_points, reverse=True)
+        optimal_lineup.extend(wrs[:2])
+
+    # Select 1 TE (highest scoring)
+    if tes:
+        tes.sort(key=lambda ps: ps.fantasy_points, reverse=True)
+        optimal_lineup.append(tes[0])
+
+    # Sort by position order for consistent output: QB, RB, WR, WR, TE
+    position_order = {"QB": 0, "RB": 1, "WR": 2, "TE": 3}
+    optimal_lineup.sort(
+        key=lambda ps: (position_order.get(ps.player_position, 99), -ps.fantasy_points)
+    )
+
+    return optimal_lineup
+
+
 def calculate_week_score(
     players: list[Player],
     week: int,
@@ -24,6 +82,12 @@ def calculate_week_score(
     - RB/WR/TE: 1 point per 10 rushing/receiving yards, 6 points per TD,
       0.5 points per reception (half-PPR)
 
+    For each team, selects the optimal lineup:
+    - 1 QB (highest scoring)
+    - 1 RB (highest scoring)
+    - 2 WRs (2 highest scoring)
+    - 1 TE (highest scoring)
+
     Parameters
     ----------
     players : list[Player]
@@ -37,7 +101,8 @@ def calculate_week_score(
     -------
     list[TeamScore]
         List of TeamScore objects, one per fantasy team, sorted by total
-        points in descending order.
+        points in descending order. Each TeamScore contains only the players
+        in the optimal lineup for that team.
 
     Raises
     ------
@@ -84,7 +149,8 @@ def calculate_week_score(
     # Calculate team scores using player matcher
     team_scores = []
     for fantasy_team, team_players in teams_dict.items():
-        player_scores = []
+        # First, calculate scores for all players on the team
+        all_player_scores = []
         for player in team_players:
             # Use player matcher to find the player in the stats
             matched_player = find_player_match(
@@ -123,16 +189,20 @@ def calculate_week_score(
                 fantasy_points=round(fantasy_points, 2),
             )
 
-            player_scores.append(player_score)
+            all_player_scores.append(player_score)
 
-        total_points = sum(ps.fantasy_points for ps in player_scores)
+        # Select optimal lineup (1 QB, 1 RB, 2 WRs, 1 TE)
+        optimal_lineup = select_optimal_lineup(all_player_scores)
+
+        # Calculate total points from the optimal lineup
+        total_points = sum(ps.fantasy_points for ps in optimal_lineup)
 
         team_score = TeamScore(
             fantasy_team=fantasy_team,
             week=week,
             season=season,
             total_points=round(total_points, 2),
-            player_scores=player_scores,
+            player_scores=optimal_lineup,
         )
         team_scores.append(team_score)
 
