@@ -1,6 +1,7 @@
 """Utility for matching player names from CSV to nflreadpy data."""
 
 import re
+from difflib import SequenceMatcher
 from typing import Optional
 
 import pandas as pd
@@ -70,6 +71,13 @@ def fuzzy_match_name(csv_name: str, api_name: str, threshold: float = 0.8) -> bo
     # One contains the other (handles nicknames or extra words)
     if csv_normalized in api_normalized or api_normalized in csv_normalized:
         return True
+    
+    # Handle multi-word last names where one has a space and the other doesn't
+    # (e.g., "Met Calf" vs "Metcalf")
+    csv_no_spaces = csv_normalized.replace(" ", "")
+    api_no_spaces = api_normalized.replace(" ", "")
+    if csv_no_spaces == api_no_spaces:
+        return True
 
     # Split into words and check if all words from shorter name are in longer name
     csv_words = csv_normalized.split()
@@ -125,8 +133,11 @@ def fuzzy_match_name(csv_name: str, api_name: str, threshold: float = 0.8) -> bo
 
     # If both have at least one meaningful word, check if last names match
     if csv_meaningful and api_meaningful:
-        # Last meaningful word (usually the last name)
-        if csv_meaningful[-1] == api_meaningful[-1]:
+        csv_last = csv_meaningful[-1]
+        api_last = api_meaningful[-1]
+        
+        # Exact last name match
+        if csv_last == api_last:
             # If one name has only one word (initial + last name), match by last name
             if len(csv_meaningful) == 1 or len(api_meaningful) == 1:
                 return True
@@ -135,6 +146,45 @@ def fuzzy_match_name(csv_name: str, api_name: str, threshold: float = 0.8) -> bo
                 csv_first_last = {csv_meaningful[0], csv_meaningful[-1]}
                 api_first_last = {api_meaningful[0], api_meaningful[-1]}
                 if csv_first_last == api_first_last:
+                    return True
+        
+        # Fuzzy last name match for typos (e.g., "Mahones" vs "Mahomes", "Achone" vs "Achane")
+        # Use SequenceMatcher to check similarity
+        similarity = SequenceMatcher(None, csv_last, api_last).ratio()
+        
+        # Lower threshold (0.65) if one name has only one word (initial + last name)
+        # This helps catch cases like "D.Njoku" vs "David Nioko" or "D.London" vs "Drake Lomoon"
+        threshold = 0.65 if (len(csv_meaningful) == 1 or len(api_meaningful) == 1) else 0.75
+        
+        if similarity >= threshold:
+            # If one name has only one word (initial + last name), match by similar last name
+            if len(csv_meaningful) == 1 or len(api_meaningful) == 1:
+                return True
+            # If both have multiple words, check if first names also match reasonably
+            if len(csv_meaningful) >= 2 and len(api_meaningful) >= 2:
+                # If first names are similar or one is an initial, it's likely a match
+                csv_first = csv_meaningful[0]
+                api_first = api_meaningful[0]
+                first_similarity = SequenceMatcher(None, csv_first, api_first).ratio()
+                if first_similarity >= 0.7 or is_initial(csv_first) or is_initial(api_first):
+                    return True
+        
+        # Handle multi-word last names (e.g., "Met Calf" vs "Metcalf")
+        # Compare the full last name parts
+        if len(csv_meaningful) > 1 and len(api_meaningful) > 1:
+            # Check if last two words of one match the last word of the other
+            csv_last_two = " ".join(csv_meaningful[-2:])
+            api_last_two = " ".join(api_meaningful[-2:])
+            csv_last_no_space = csv_last_two.replace(" ", "")
+            api_last_no_space = api_last_two.replace(" ", "")
+            if csv_last_no_space == api_last_no_space:
+                return True
+            # Also check if one last name is a combination of the other's last two words
+            if len(csv_meaningful) >= 2 and len(api_meaningful) == 1:
+                if csv_last_no_space == api_last:
+                    return True
+            if len(api_meaningful) >= 2 and len(csv_meaningful) == 1:
+                if api_last_no_space == csv_last:
                     return True
 
     return False

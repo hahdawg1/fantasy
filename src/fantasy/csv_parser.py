@@ -43,6 +43,13 @@ def parse_fantasy_csv(csv_path: str | Path) -> list[Player]:
     # Normalize column names (case-insensitive, strip whitespace, handle underscores)
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
+    # Handle alternative column names
+    column_mapping = {
+        "fantasy_team_name": "fantasy_team",
+        "team_name": "fantasy_team",
+    }
+    df = df.rename(columns=column_mapping)
+
     required_columns = ["player_name", "player_team", "player_position", "fantasy_team"]
     missing_columns = [col for col in required_columns if col not in df.columns]
 
